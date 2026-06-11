@@ -1,214 +1,97 @@
-<a href="https://repology.org/metapackage/teeworlds/versions">
-    <img src="https://repology.org/badge/vertical-allrepos/teeworlds.svg" alt="Packaging status" align="right">
-</a>
+<div align="center">
 
-Teeworlds ![GitHub Actions](https://github.com/teeworlds/teeworlds/workflows/Build/badge.svg)
-=========
+# Teeworlds — OUYA Port
 
-A retro multiplayer shooter
----------------------------
+**[Teeworlds](https://www.teeworlds.com/)** — the free, fast 2D retro multiplayer shooter — running **natively on the OUYA** console, with full gamepad support.
 
-Teeworlds is a free online multiplayer game, available for all major
-operating systems. Battle with up to 16 players in a variety of game
-modes, including Team Deathmatch and Capture The Flag. You can even
-design your own maps!
+[![Download](https://img.shields.io/badge/Download-APK-2ecc71?style=for-the-badge)](https://github.com/RyoSaeba89/teeworlds-ouya/releases/latest)
 
-This software is provided 'as-is', without any express or implied
-warranty. In no event will the authors be held liable for any damages
-arising from the use of this software. See license.txt for full license
-text including copyright information.
+NVIDIA Tegra 3 &nbsp;·&nbsp; Android 4.1 (API 16) &nbsp;·&nbsp; OpenGL ES 2.0 &nbsp;·&nbsp; armeabi-v7a &nbsp;·&nbsp; Teeworlds 0.7.5
 
-Please visit https://www.teeworlds.com/ for up-to-date information about
-the game, including new versions, custom maps and much more.
-
-Originally written by Magnus Auvinen.
+</div>
 
 ---
 
-Teeworlds supports two build systems: CMake and bam.
+## What this is
 
-Building on Linux or macOS (CMake)
-==========================
+A native OUYA build of **Teeworlds 0.7.5** — the upstream release, unmodified gameplay, plus
+the engine and platform work needed to make it boot, render and play on the OUYA's NVIDIA Tegra 3
+(Android 4.1 / OpenGL ES 2.0 only). Everything ships in one ~30 MB APK: the game, its free
+maps/skins/sounds, and a gamepad control scheme so the whole game is playable from the couch with
+no keyboard or mouse.
 
-Installing dependencies
------------------------
+Online multiplayer against standard Teeworlds 0.7 servers works.
 
-    # Debian/Ubuntu
-    sudo apt install build-essential cmake git libfreetype6-dev libsdl2-dev libpnglite-dev libwavpack-dev python3
-    
-    # Fedora
-    sudo dnf install @development-tools cmake gcc-c++ git freetype-devel pnglite-devel python3 SDL2-devel wavpack-devel
-    
-    # Arch Linux (doesn't have pnglite in its repositories)
-    sudo pacman -S --needed base-devel cmake freetype2 git python sdl2 wavpack
-    
-    # macOS
-    brew install cmake freetype sdl2
+## Features
 
+- 🎮 **Full OUYA controller support** — twin-stick play: the right stick aims the crosshair, the
+  left stick (and D-pad) moves, with hook, fire, jump, weapon-switch, scoreboard and a menu button
+  all mapped to the pad. The menus are fully gamepad-drivable too.
+- 🖥️ **GLES2 rendering via gl4es** — Teeworlds' desktop fixed-function OpenGL is translated to
+  OpenGL ES 2.0, including the `LIBGL_NOTEST` workaround for the Tegra 3 Cg shader-compiler crash
+  that kills most GLES ports on this hardware.
+- 🗺️ **Tilemap rendering on a 3D-texture-less GPU** — Tegra 3 reports `GL_MAX_3D_TEXTURE_SIZE = 0`,
+  so Teeworlds' tileset arrays are remapped to a 2D texture atlas (with a half-texel inset to keep
+  tile edges seamless). Maps render correctly.
+- ⚡ **Tuned for the Tegra 3** — the render surface is drawn at 540p and upscaled to fullscreen,
+  giving a smooth, vsync-locked framerate where native resolution was GPU-bound.
+- 🌐 **Online multiplayer** — join Teeworlds 0.7 servers over the network.
+- 🔊 SDL audio; no proprietary data — Teeworlds ships its own free art, maps and sounds.
 
-Downloading repository
-----------------------
+## Download & install
 
-    git clone https://github.com/teeworlds/teeworlds --recurse-submodules
-    cd teeworlds
-    
-    # If you already cloned the repository before, use:
-    # git submodule update --init
+Grab the APK from the **[latest release](https://github.com/RyoSaeba89/teeworlds-ouya/releases/latest)**,
+then either copy it to the console and open it with a file manager, or sideload over ADB:
 
+```bash
+adb connect <your-ouya-ip>:5555
+adb install Teeworlds-OUYA.apk
+```
 
-Building
---------
+The first launch unpacks the game data (~28 MB) to the console — give it a moment on the first run only.
 
-    mkdir -p build
-    cd build
-    cmake ..
-    make
+## Controls
 
-On subsequent builds, you only have to repeat the `make` step.
+| Control | Action | | Control | Action |
+|---|---|:-:|---|---|
+| **Right stick** | Aim the crosshair | | **L1** | Jump |
+| **Left stick / D-pad** | Move left / right | | **R1** | Next weapon |
+| **R2** | Fire | | **L3** | Scoreboard (hold) |
+| **L2** | Hook | | **Face button** | Open / close menu · Back |
+| **A** | Confirm / click (in menus) | | | |
 
-You can then run the client with `./teeworlds` and the server with
-`./teeworlds_srv`.
+Menu cursor speed (`ui_joystick_sens`), aim sensitivity (`joystick_sens`) and dead-zone
+(`joystick_tolerance`) are adjustable and persisted. The full mapping lives in the shipped
+[`autoexec.cfg`](android/app/src/main/assets/autoexec.cfg) and can be re-bound on-device.
 
+## Building from source
 
-Build options
--------------
+The complete build recipe and engineering log — toolchain, the hand-cross-compiled native
+dependencies (gl4es, SDL2, FreeType), every runtime fix, the controller mapping and the
+performance pass — is in **[OUYA_PORT.md](OUYA_PORT.md)**.
 
-The following options can be passed to the `cmake ..` command line (between the
-`cmake` and `..`) in the "Building" step above.
+```powershell
+# 1. native: CMake/ninja -> libmain.so -> staged into jniLibs
+cd android
+cmd /c build_native.bat
 
-`-GNinja`: Use the Ninja build system instead of Make. This automatically
-parallelizes the build and is generally **faster**. (Needs `sudo apt install
-ninja-build` on Debian, `sudo dnf install ninja-build` on Fedora, and `sudo
-pacman -S --needed ninja` on Arch Linux.)
+# 2. package: Java + jniLibs + assets -> APK
+$env:JAVA_HOME = "<portable JDK 11>"
+.\gradlew.bat assembleDebug --no-daemon
+```
 
-`-DDEV=ON`: Enable debug mode and disable some release mechanics. This leads to
-**faster** builds.
+> The OUYA targets **API 16 / GLES2**, so it needs **NDK 23.2.x** (the last NDK that targets
+> `android-16` on armeabi-v7a) and a Java ≤ 16 JDK for AGP 7.0.2. The build packages a prebuilt
+> `libmain.so` directly (gradle's `externalNativeBuild` `.so` copy is broken on the Windows host) —
+> see §6 of the port log.
 
-`-DCLIENT=OFF`: Disable generation of the client target. Can be useful on
-headless servers which don't have graphics libraries like SDL2 installed.
+## Credits & license
 
-Building on Linux or macOS (bam)
-==========================
+- **Teeworlds** © the Teeworlds developers — <https://www.teeworlds.com/>. Engine/code under a
+  zlib-style license; art and data under CC-BY-SA 3.0. See [`license.txt`](license.txt).
+- **OUYA port** by RyoSaeba89, building on the toolchain and native-dependency work from the
+  [AssaultCube OUYA port](https://github.com/RyoSaeba89/assaultcube-ouya).
+- [gl4es](https://github.com/ptitSeb/gl4es) (MIT) — OpenGL → GLES2 translation.
+- [SDL2](https://www.libsdl.org/) (zlib) · [FreeType](https://freetype.org/) (FTL).
 
-Installing dependencies
------------------------
-
-    # Debian/Ubuntu 19.10+
-    sudo apt install bam git libfreetype6-dev libsdl2-dev libpnglite-dev libwavpack-dev python3
-    
-    # Fedora
-    sudo dnf install bam gcc-c++ git freetype-devel pnglite-devel python3 SDL2-devel wavpack-devel
-    
-    # Arch Linux (doesn't have pnglite in its repositories)
-    sudo pacman -S --needed base-devel bam freetype2 git python sdl2 wavpack
-    
-    # macOS
-    brew install bam freetype sdl2
-    
-    # other (add bam to your path)
-    git clone https://github.com/teeworlds/bam
-    cd bam
-    ./make_unix.sh
-
-
-Downloading repository
-----------------------
-
-    git clone https://github.com/teeworlds/teeworlds --recurse-submodules
-    cd teeworlds
-    
-    # If you already cloned the repository before, use:
-    # git submodule update --init
-
-
-Building
---------
-
-    bam
-
-The compiled game is located in a sub-folder of `build`. You can run the client from there with `./teeworlds` and the server with `./teeworlds_srv`.
-
-
-Build options
--------------
-
-One of the following targets can be added to the `bam` command line: `game` (default), `server`, `client`, `content`, `masterserver`, `tools`.
-
-The following options can also be added.
-
-`conf=release` to build in release mode (defaults to `conf=debug`).
-
-`arch=x86` or `arch=x86_64` to force select an architecture.
-
-Building on Windows with Visual Studio & CMake
-======================
-
-Download and install some version of [Microsoft Visual
-Studio](https://www.visualstudio.com/) (as of writing, MSVS Community 2019)
-with the following components:
-
-* Desktop development with C++ (on the main page)
-* Python development (on the main page)
-* Git for Windows (in Individual Components → Code tools)
-
-Run Visual Studio. Open the Team Explorer (View → Team Explorer, Ctrl+^,
-Ctrl+M). Click Clone (in the Team Explorer, Connect → Local Git Repositories).
-Enter `https://github.com/teeworlds/teeworlds` into the first input box. Wait
-for the download to complete (terminals might pop up).
-
-Wait until the CMake configuration is done (watch the Output windows at the
-bottom).
-
-Select `teeworlds.exe` in the Select Startup Item… combobox next to the green
-arrow. Wait for the compilation to finish.
-
-For subsequent builds you only have to click the button with the green arrow
-again.
-
-Building on Windows with MSVC build tools & bam
-======================
-
-Download and install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and [Python](https://www.python.org/downloads/).
-
-Download and unzip [Teeworlds stable sources](https://github.com/teeworlds/teeworlds/releases) or [Teeworlds latest sources](https://github.com/teeworlds/teeworlds/archive/master.zip).
-
-Download and unzip [bam](https://github.com/matricks/bam/archive/v0.5.1.tar.gz) to `teeworlds-version\bam`.
-
-Run the `x64 Native Tools Command Prompt` (or `x86` for 32-bit) from the start menu.
-
-    # Navigate to the Teeworlds source directory
-    cd ...\teeworlds-version
-    
-    # Build bam (use make_win32_msvc.bat for 32-bit)
-    cd bam
-    make_win64_msvc.bat
-    copy bam ..
-    cd ..
-    
-    # Build Teeworlds
-    bam conf=release
-
-Use `conf=debug` to build the debug version instead. You can also provide a target after the `bam` command : `game` (default), `server`, `client`, `content`, `masterserver`, `tools`.
-
-Building on Windows with MinGW & CMake
-======================
-
-Download and install MinGW with at least the following components:
-
-- mingw-developer-toolkit-bin
-- mingw32-base-bin
-- mingw32-gcc-g++-bin
-- msys-base-bin
-
-Also install [Git](https://git-scm.com/downloads) (for downloading the source
-code), [Python](https://www.python.org/downloads/) and
-[CMake](https://cmake.org/download/).
-
-Open CMake ("CMake (cmake-gui)" in the start menu). Click "Browse Source"
-(first line) and select the directory with the Teeworlds source code. Next,
-click "Browse Build" and create a subdirectory for the build (e.g. called
-"build"). Then click "Configure". Select "MinGW Makefiles" as the generator and
-click "Finish". Wait a bit (until the progress bar is full). Then click
-"Generate".
-
-You can now build Teeworlds by executing `mingw32-make` in the build directory.
+This is an unofficial, non-commercial fan port. Not affiliated with the Teeworlds project or OUYA.

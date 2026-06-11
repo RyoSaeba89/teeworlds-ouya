@@ -444,7 +444,26 @@ void CRenderTools::RenderTilemap(const CTile *pTiles, int w, int h, float Scale,
 						y1 = Tmp;
 					}
 
+#if defined(__ANDROID__)
+					// 2D atlas fallback (Tegra 3 has no 3D textures): map the tile
+					// index into the 16x16 tileset atlas and draw with Dimension 2
+					// (QuadsSetSubsetFree without an index sets m_Dimension = 2).
+					// Inset the cell by ~half a texel so linear filtering never
+					// samples across the cell border (kills the tile-grid seams
+					// on repeated tiles like the brown ground).
+					{
+						const float TS = 1.0f/IGraphics::NUMTILES_DIMENSION;
+						const float In = TS/128.0f; // ~half-texel for a 1024px (16x64) atlas
+						const float US = TS - 2.0f*In;
+						const float tx = (Index%IGraphics::NUMTILES_DIMENSION)*TS + In;
+						const float ty = (Index/IGraphics::NUMTILES_DIMENSION)*TS + In;
+						Graphics()->QuadsSetSubsetFree(
+							tx+x0*US, ty+y0*US, tx+x1*US, ty+y1*US,
+							tx+x2*US, ty+y2*US, tx+x3*US, ty+y3*US);
+					}
+#else
 					Graphics()->QuadsSetSubsetFree(x0, y0, x1, y1, x2, y2, x3, y3, Index);
+#endif
 					IGraphics::CQuadItem QuadItem(x*Scale, y*Scale, Scale, Scale);
 					Graphics()->QuadsDrawTL(&QuadItem, 1);
 				}

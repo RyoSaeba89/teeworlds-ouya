@@ -83,6 +83,13 @@ private:
 	bool m_aInputState[g_MaxKeys];
 	int m_InputCounter;
 
+	// Persistent edge state for joystick axis->key events. Kept separate from
+	// m_aInputState because UpdateJoystickState() re-polls (and Update() zeroes)
+	// m_aInputState every frame, which would corrupt the PRESS/RELEASE edge
+	// detection in HandleJoystickAxisMotionEvent() and make stick binds fire
+	// erratically.
+	bool m_aJoystickAxisEventState[NUM_JOYSTICK_AXES*2];
+
 	void UpdateMouseState();
 	void UpdateJoystickState();
 	void HandleJoystickAxisMotionEvent(const SDL_Event &Event);

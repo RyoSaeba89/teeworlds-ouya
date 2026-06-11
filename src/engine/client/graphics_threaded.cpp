@@ -351,8 +351,14 @@ IGraphics::CTextureHandle CGraphics_Threaded::LoadTextureRaw(int Width, int Heig
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_QUALITY;
 	if(Flags&IGraphics::TEXLOAD_ARRAY_256)
 	{
+#if defined(__ANDROID__)
+		// OUYA/Tegra 3 (gl4es) reports GL_MAX_3D_TEXTURE_SIZE = 0: no 3D textures.
+		// Keep the tileset as a 2D atlas (the source image is already a 16x16 grid)
+		// and render tile layers via 2D atlas UVs (see render_map.cpp RenderTilemap).
+#else
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_TEXTURE3D;
 		Cmd.m_Flags &= ~CCommandBuffer::TEXFLAG_TEXTURE2D;
+#endif
 	}
 	if(Flags&IGraphics::TEXLOAD_MULTI_DIMENSION)
 		Cmd.m_Flags |= CCommandBuffer::TEXFLAG_TEXTURE3D;

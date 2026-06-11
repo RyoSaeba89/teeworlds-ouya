@@ -421,6 +421,9 @@ void CGameClient::OnUpdate()
 	// handle mouse and joystick movement, prefer mouse movement
 	float x = 0.0f, y = 0.0f;
 	int CursorType = Input()->CursorRelative(&x, &y);
+#if defined(__ANDROID__)
+	{ static int s_C = 0; if(CursorType != IInput::CURSOR_NONE && (s_C++ % 8) == 0) dbg_msg("curdbg", "CursorRelative type=%d x=%.3f y=%.3f", CursorType, x, y); }
+#endif
 	if(CursorType != IInput::CURSOR_NONE)
 	{
 		for(int h = 0; h < m_Input.m_Num; h++)

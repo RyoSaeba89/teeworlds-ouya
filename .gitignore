@@ -76,3 +76,12 @@ googletest-src
 install_manifest.txt
 pack_*/
 rules.ninja
+
+# OUYA Android port — build outputs only (source, prebuilt libs, headers and
+# autoexec.cfg under android/ ARE tracked; runtime data/ is regenerated from
+# datasrc/ per OUYA_PORT.md §8, src/generated/ per §3).
+/android/app/build/
+/android/.gradle/
+/android/app/src/main/jniLibs/
+*.apk
+codegen_err.txt

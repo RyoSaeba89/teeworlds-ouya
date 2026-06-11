@@ -665,6 +665,14 @@ int CGraphicsBackend_SDL_OpenGL::Init(const char *pName, int *pScreen, int *pWin
 		SDL_SetHint(SDL_HINT_VIDEO_X11_XRANDR, "1");
 
 	// set gl attributes
+#if defined(__ANDROID__)
+	// OUYA/Tegra 3: gl4es exposes an OpenGL ES 2.0 backend. Request an ES 2.0
+	// context explicitly before window/context creation, otherwise SDL asks EGL
+	// for a desktop-GL config and SDL_GL_CreateContext fails with EGL_BAD_DISPLAY.
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#endif
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	if(FsaaSamples)
 	{

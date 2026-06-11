@@ -53,6 +53,7 @@ CInput::CInput()
 {
 	mem_zero(m_aInputCount, sizeof(m_aInputCount));
 	mem_zero(m_aInputState, sizeof(m_aInputState));
+	mem_zero(m_aJoystickAxisEventState, sizeof(m_aJoystickAxisEventState));
 
 	m_pConfig = 0;
 	m_pConsole = 0;
@@ -410,29 +411,34 @@ void CInput::HandleJoystickAxisMotionEvent(const SDL_Event &Event)
 
 	const int LeftKey = KEY_JOY_AXIS_0_LEFT + 2 * Event.jaxis.axis;
 	const int RightKey = LeftKey + 1;
+	const int LeftEdge = 2 * Event.jaxis.axis;
+	const int RightEdge = LeftEdge + 1;
 	const float DeadZone = GetJoystickDeadzone();
 
-	if(Event.jaxis.value <= SDL_JOYSTICK_AXIS_MIN * DeadZone && !m_aInputState[LeftKey])
+	// Edge detection uses m_aJoystickAxisEventState (persistent), NOT m_aInputState:
+	// m_aInputState is re-polled/zeroed every frame by UpdateJoystickState() and
+	// would corrupt these PRESS/RELEASE edges, making stick binds fire randomly.
+	if(Event.jaxis.value <= SDL_JOYSTICK_AXIS_MIN * DeadZone && !m_aJoystickAxisEventState[LeftEdge])
 	{
-		m_aInputState[LeftKey] = true;
+		m_aJoystickAxisEventState[LeftEdge] = true;
 		m_aInputCount[LeftKey] = m_InputCounter;
 		AddEvent(0, LeftKey, IInput::FLAG_PRESS);
 	}
-	else if(Event.jaxis.value > SDL_JOYSTICK_AXIS_MIN * DeadZone && m_aInputState[LeftKey])
+	else if(Event.jaxis.value > SDL_JOYSTICK_AXIS_MIN * DeadZone && m_aJoystickAxisEventState[LeftEdge])
 	{
-		m_aInputState[LeftKey] = false;
+		m_aJoystickAxisEventState[LeftEdge] = false;
 		AddEvent(0, LeftKey, IInput::FLAG_RELEASE);
 	}
 
-	if(Event.jaxis.value >= SDL_JOYSTICK_AXIS_MAX * DeadZone && !m_aInputState[RightKey])
+	if(Event.jaxis.value >= SDL_JOYSTICK_AXIS_MAX * DeadZone && !m_aJoystickAxisEventState[RightEdge])
 	{
-		m_aInputState[RightKey] = true;
+		m_aJoystickAxisEventState[RightEdge] = true;
 		m_aInputCount[RightKey] = m_InputCounter;
 		AddEvent(0, RightKey, IInput::FLAG_PRESS);
 	}
-	else if(Event.jaxis.value < SDL_JOYSTICK_AXIS_MAX * DeadZone && m_aInputState[RightKey])
+	else if(Event.jaxis.value < SDL_JOYSTICK_AXIS_MAX * DeadZone && m_aJoystickAxisEventState[RightEdge])
 	{
-		m_aInputState[RightKey] = false;
+		m_aJoystickAxisEventState[RightEdge] = false;
 		AddEvent(0, RightKey, IInput::FLAG_RELEASE);
 	}
 }
@@ -444,6 +450,7 @@ void CInput::HandleJoystickButtonEvent(const SDL_Event &Event)
 	CJoystick *pJoystick = GetActiveJoystick();
 	if(!pJoystick || pJoystick->GetInstanceID() != Event.jbutton.which)
 		return;
+
 	if(Event.jbutton.button >= NUM_JOYSTICK_BUTTONS)
 		return;
 
@@ -520,6 +527,25 @@ int CInput::Update()
 	SDL_Event Event;
 	while(SDL_PollEvent(&Event))
 	{
+#if defined(__ANDROID__)
+		// TEMP INPUT DIAGNOSTIC: log exactly what each OUYA control emits.
+		if(Event.type == SDL_JOYAXISMOTION)
+			dbg_msg("inpdbg", "JOYAXIS axis=%d val=%d which=%d", Event.jaxis.axis, Event.jaxis.value, (int)Event.jaxis.which);
+		else if(Event.type == SDL_JOYBUTTONDOWN || Event.type == SDL_JOYBUTTONUP)
+			dbg_msg("inpdbg", "JOYBTN btn=%d %s which=%d", Event.jbutton.button, Event.type==SDL_JOYBUTTONDOWN?"DN":"UP", (int)Event.jbutton.which);
+		else if(Event.type == SDL_JOYHATMOTION)
+			dbg_msg("inpdbg", "JOYHAT hat=%d val=%d", Event.jhat.hat, Event.jhat.value);
+		else if(Event.type == SDL_KEYDOWN || Event.type == SDL_KEYUP)
+			dbg_msg("inpdbg", "KEY sym=%d sc=%d %s", (int)Event.key.keysym.sym, Event.key.keysym.scancode, Event.type==SDL_KEYDOWN?"DN":"UP");
+		else if(Event.type == SDL_MOUSEMOTION)
+			dbg_msg("inpdbg", "MOUSEMOTION rel=%d,%d", Event.motion.xrel, Event.motion.yrel);
+		else if(Event.type == SDL_MOUSEBUTTONDOWN || Event.type == SDL_MOUSEBUTTONUP)
+			dbg_msg("inpdbg", "MOUSEBTN btn=%d %s", Event.button.button, Event.type==SDL_MOUSEBUTTONDOWN?"DN":"UP");
+		else if(Event.type == SDL_CONTROLLERAXISMOTION)
+			dbg_msg("inpdbg", "CTRLAXIS axis=%d val=%d", Event.caxis.axis, Event.caxis.value);
+		else if(Event.type == SDL_CONTROLLERBUTTONDOWN || Event.type == SDL_CONTROLLERBUTTONUP)
+			dbg_msg("inpdbg", "CTRLBTN btn=%d", Event.cbutton.button);
+#endif
 		int Key = -1;
 		int Scancode = -1;
 		int Action = IInput::FLAG_PRESS;

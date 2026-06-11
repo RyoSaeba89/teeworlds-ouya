@@ -9,6 +9,10 @@
 
 #include "system.h"
 
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -144,6 +148,13 @@ void dbg_msg(const char *sys, const char *fmt, ...)
 	vsnprintf(msg, sizeof(str)-len, fmt, args);
 #endif
 	va_end(args);
+
+#if defined(__ANDROID__)
+	/* Teeworlds' default logger writes to stdout, which SDL 2.0.14 does not
+	   forward to logcat -- mirror every dbg_msg to logcat so the engine is
+	   debuggable on the OUYA. */
+	__android_log_write(ANDROID_LOG_INFO, "teeworlds", str);
+#endif
 
 	for(i = 0; i < num_loggers; i++)
 		loggers[i].logger(str, loggers[i].user);

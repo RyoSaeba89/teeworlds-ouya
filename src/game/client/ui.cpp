@@ -96,6 +96,12 @@ void CUI::Update(float MouseX, float MouseY, float MouseWorldX, float MouseWorld
 		if(Input()->KeyIsPressed(KEY_MOUSE_1)) MouseButtons |= 1;
 		if(Input()->KeyIsPressed(KEY_MOUSE_2)) MouseButtons |= 2;
 		if(Input()->KeyIsPressed(KEY_MOUSE_3)) MouseButtons |= 4;
+#if defined(__ANDROID__)
+		// OUYA has no mouse: the A button (joystick0) acts as the UI left-click
+		// so the gamepad can drive every menu. B (joystick1) is handled in
+		// CMenus::OnInput as Back/Escape, not as a right-click.
+		if(Input()->KeyIsPressed(KEY_JOYSTICK_BUTTON_0)) MouseButtons |= 1;
+#endif
 	}
 
 	m_MouseX = MouseX;
@@ -104,6 +110,9 @@ void CUI::Update(float MouseX, float MouseY, float MouseWorldX, float MouseWorld
 	m_MouseWorldY = MouseWorldY;
 	m_LastMouseButtons = m_MouseButtons;
 	m_MouseButtons = MouseButtons;
+#if defined(__ANDROID__)
+	if(MouseButtons) { static int s_B = 0; if((s_B++ % 8) == 0) dbg_msg("uidbg", "MouseButtons=%u cursor=%.0f,%.0f", MouseButtons, MouseX, MouseY); }
+#endif
 	m_pHotItem = m_pBecommingHotItem;
 	if(m_pActiveItem)
 		m_pHotItem = m_pActiveItem;
@@ -172,7 +181,12 @@ void CUI::ConvertCursorMove(float *pX, float *pY, int CursorType) const
 			Factor = Config()->m_UiMousesens/100.0f;
 			break;
 		case IInput::CURSOR_JOYSTICK:
-			Factor = Config()->m_UiJoystickSens/100.0f;
+			// CJoystick::Relative() emits a tiny ~0.1px/frame step meant to be
+			// scaled by a very high ui_joystick_sens. On OUYA the saved config
+			// pins that at 100, leaving the menu cursor nearly frozen, so apply
+			// a fixed UI-only boost here (does not touch in-game aim, which has
+			// its own joystick_sens path in CControls::OnCursorMove).
+			Factor = Config()->m_UiJoystickSens/100.0f * 60.0f;
 			break;
 	}
 	*pX *= Factor;

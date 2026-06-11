@@ -2547,12 +2547,30 @@ void CClient::DoVersionSpecificActions()
 	Prediction Latency
 		Upstream latency
 */
+#if defined(__ANDROID__)
+// Defined in android/app/src/main/cpp/tw_android.cpp; points the engine at the
+// app's external files dir (assets unpacked there by the Java AssetExporter)
+// before storage/data resolution. Declared at namespace scope (extern "C" is
+// not permitted at block scope).
+extern "C" void tw_android_setup(void);
+#endif
+
 #if defined(CONF_PLATFORM_MACOS)
 extern "C" int TWMain(int argc, const char **argv)
+#elif defined(__ANDROID__)
+// SDL on Android dlsym's "SDL_main" from libmain.so. The SDL_main.h
+// `#define main SDL_main` macro does not fire here, and Teeworlds' const-char**
+// main would be C++-mangled and unfindable, so export SDL_main directly with C
+// linkage and SDL's argv type, then alias to the const-char** the engine uses.
+extern "C" int SDL_main(int argc, char **ppArgv)
 #else
 int main(int argc, const char **argv)
 #endif
 {
+#if defined(__ANDROID__)
+	const char **argv = (const char **)ppArgv;
+	tw_android_setup();
+#endif
 	cmdline_fix(&argc, &argv);
 #if defined(CONF_FAMILY_WINDOWS)
 	bool QuickEditMode = false;

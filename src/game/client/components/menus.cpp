@@ -1645,6 +1645,14 @@ bool CMenus::OnInput(IInput::CEvent e)
 {
 	m_LastInput = time_get();
 
+#if defined(__ANDROID__)
+	// OUYA: a face button (joystick3) is the single menu/Back control. It opens
+	// the menu in-game and closes/cancels in menus, i.e. it behaves like Escape
+	// everywhere. No console command opens the menu, hence the remap here.
+	if(e.m_Key == KEY_JOYSTICK_BUTTON_3)
+		e.m_Key = KEY_ESCAPE;
+#endif
+
 	// special handle esc and enter for popup purposes
 	if(e.m_Flags&IInput::FLAG_PRESS && e.m_Key == KEY_ESCAPE)
 	{
