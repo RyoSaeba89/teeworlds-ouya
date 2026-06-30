@@ -16,13 +16,16 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+        <!-- Launcher entry: unpacks game data off the UI thread (avoids the
+             multi-minute black screen / ANR on first run), then hands off to the
+             SDL activity. Carries the OUYA GAME category so it appears (with the
+             ouya_icon tile) in the games menu. -->
         <activity
-            android:name=".TeeworldsActivity"
-            android:alwaysRetainTaskState="true"
+            android:name=".LoaderActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/app_name"
-            android:launchMode="singleInstance"
-            android:screenOrientation="landscape">
+            android:screenOrientation="landscape"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -30,5 +33,14 @@
                 <category android:name="tv.ouya.intent.category.GAME" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".TeeworldsActivity"
+            android:alwaysRetainTaskState="true"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:label="@string/app_name"
+            android:launchMode="singleInstance"
+            android:screenOrientation="landscape"
+            android:exported="false" />
     </application>
 </manifest>

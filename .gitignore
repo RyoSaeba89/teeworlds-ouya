@@ -27,7 +27,10 @@ map_resave*
 map_version*
 mastersrv*
 packetgen*
-teeworlds*
+# Anchored to repo root: this ignores the upstream-built /teeworlds client
+# binary WITHOUT swallowing the OUYA port's own package dir
+# android/app/src/main/java/org/teeworlds/ (which must be tracked).
+/teeworlds*
 !other/bash-completion/teeworlds
 !teeworlds.manifest
 !teeworlds.rc
